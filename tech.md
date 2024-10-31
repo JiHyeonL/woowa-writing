@@ -12,6 +12,7 @@ SSE를 적용한 배경부터 구현 방법까지 알아보도록 하겠습니�
 그러나 페어룸에 *여러 사용자*가 접속하게 된다면 한 가지 고려해야 할 점이 생깁니다.  
 바로 `타이머 동기화` 입니다.  
 만약 타이머가 동기화 되지 않는다면 어떤 상황이 발생할까요?  
+![img_4.png](img_4.png)
 > ~ 레모네와 사과가 페어프로그래밍을 진행하고 있다~  
 🍋 : 페어룸 만들었어. 이제 타이머 시작할게!  
 🍎 : 타이머를 내 노트북으로도 확인하고 싶으니까 레모네가 만든 페어룸에 접속해야겠다. 어, 그런데 타이머 화면이 레모네와 다르네?  
@@ -36,7 +37,8 @@ SSE의 특징은 **단방향 통신**이라는 점인데요, `서버에서 클�
 이 `커넥션`으로 서버가 클라이언트에게 데이터를 전송하게 됩니다.  
 (물론 커넥션이 닫히면 해당 커넥션으로 더이상 데이터를 보낼 수 없습니다.)  
 
-<이미지 출처: https://bigboxcode.com/server-sent-events-sse>
+![img_5.png](img_5.png)
+이미지 출처:  https://bigboxcode.com/server-sent-events-sse
 
 http 프로토콜 특성상 `요청-응답 주기`가 반복되어야 할텐데, 어떻게 요청이 없는데도 서버가 지속적으로 클라이언트에게 데이터를 전송할 수 있을까요?
 정답은 서버가 보내는 데이터가 *하나의 응답이 아닌*, chunk 단위의 `스트림`이기 때문입니다.
@@ -49,9 +51,10 @@ http 프로토콜 특성상 `요청-응답 주기`가 반복되어야 할텐데,
 커넥션이 끊어질 때까지 클라이언트는 서버가 보내는 데이터를 실시간으로 받을 수 있습니다.
 
 이러한 특징 때문에 SSE는 **알림** 시스템을 구축할 때 주로 사용됩니다.
-웹소켓
+
+### 웹소켓
 웹소켓은 `웹소켓 프로토콜` 기반 실시간 통신입니다. SSE처럼 http 프로토콜을 사용하지 않고, 웹소켓 전용  프로토콜을 사용합니다.
-SSE와 차별화된 또 다른 특징은 `양방향 통신`을 한다는 점입니다.
+SSE와 차별화된 또 다른 특징은 `양방향 통신`을 한다는 점입니다.  
 양방향 통신이 가능하다는 것은, **클라이언트와 서버가 동시**에 데이터를 주고받을 수 있다는 뜻입니다.
 http 프로토콜에서는 클라이언트의 요청이 올 때까지 기다린 뒤 응답을 보내거나, 서버에서 클라이언트 방향(단방향)으로만 데이터를 전송할 수 있었습니다.
 
@@ -59,25 +62,27 @@ http 프로토콜에서는 클라이언트의 요청이 올 때까지 기다린 
 사실상 `클라이언트와 서버`, `요청과 응답`이 서로 구별되지 않는 *동등한 상태*가 되는 것이죠.
 
 그래서 웹소켓은 `채팅` 애플리케이션에 주로 쓰입니다.
-그래서 어떤 기술을 사용할까?
+
+## 그래서 어떤 기술을 사용할까?
 지금까지 SSE와 웹소켓에 대해 알아보았습니다.
 이제 어떤 방식을 선택할지 결정할 시간이 되었네요.
 
-타이머를 실행하고 중지할 때 타이머 시간이
-타이머 시작 버튼을 누르면, 타이머 시간이 1초마다 줄어든다.
-타이머 일시정지 버튼을 누르면, 타이머 시간이 유지된다.
+타이머를 실행하고 중지하려면, 어떤 정보가 필요할까요?
+- 타이머 시작 버튼을 누르면, 타이머 시간이 1초마다 줄어든다.
+- 타이머 일시정지 버튼을 누르면, 타이머 시간이 유지된다.
 
 타이머 시작 요청을 보냈을 때, 1초씩 줄어드는 시간 정보만 필요하다는 것을 알 수 있습니다.
 타이머 시간을 1초마다 클라이언트에게 전송해 주면 되겠네요.
 
-그럼 여기서 떠오르는 기술이 하나 있을 텐데요, 바로 SSE 입니다.
+그럼 여기서 떠오르는 기술이 하나 있을 텐데요, 바로 SSE 입니다.  
 웹소켓이 제공하는 양방향 통신의 이점이 타이머 동기화에 필수적이지 않기 때문에 SSE를 사용하는게 더 적절해 보입니다.
 
 이제 본격적으로 구현을 시작해 봅시다.
-타이머 시간 동기화하기
+
+## 타이머 시간 동기화하기
 “코딩해듀오”는 `스프링 부트`를 사용하고 있기 때문에 `스프링 부트`를 기반으로 SSE를 구현해 보겠습니다.
-1) 커넥션 생성
-   먼저 페어룸에 접속한 클라이언트와 SSE 커넥션을 맺어야 합니다.
+### 1) 커넥션 생성
+먼저 페어룸에 접속한 클라이언트와 SSE 커넥션을 맺어야 합니다.
 
 ``` java
 @RestController
@@ -148,10 +153,10 @@ EventStreams는 `List<EventStream>`을 필드로 갖고있는 일급 컬렉션�
 EventStream은 `SseEmitter` 객체를 이용해 커넥션을 맺거나, 데이터를 전송하는 인터페이스입니다.
 
 코드가 조금 복잡해졌기 때문에, 잠깐 셀프 Q&A 시간을 갖겠습니다.
-Q) 왜 페어룸 식별자 별로 EventStreams를 보관하나요?
-A) 페어룸 별로 타이머를 독립적으로 동기화 해야 하기 때문입니다. “하나의 페어룸"에 대해 타이머 동기화를 해야 하는데, “모든 페어룸"에 대해 타이머 동기화를 하면 큰 일이 발생하겠죠?
-Q) EventStream이 아닌 EventStreams로 보관하는 이유가 무엇인가요?
-A) 다중 사용자를 고려했기 때문입니다. 클라이언트 한 명당 하나의 커넥션이 존재하기 때문에 SseEmitter도 클라이언트 수만큼 필요합니다. 그래서 페어룸에 존재하는 모든 사용자들을 List<EventStream>로 관리합니다.
+- Q) 왜 페어룸 식별자 별로 EventStreams를 보관하나요?
+- A) 페어룸 별로 타이머를 독립적으로 동기화 해야 하기 때문입니다. “하나의 페어룸"에 대해 타이머 동기화를 해야 하는데, “모든 페어룸"에 대해 타이머 동기화를 하면 큰 일이 발생하겠죠?
+- Q) EventStream이 아닌 EventStreams로 보관하는 이유가 무엇인가요?
+- A) 다중 사용자를 고려했기 때문입니다. 클라이언트 한 명당 하나의 커넥션이 존재하기 때문에 SseEmitter도 클라이언트 수만큼 필요합니다. 그래서 페어룸에 존재하는 모든 사용자들을 List<EventStream>로 관리합니다.
 
 
 이제 EventStreams에 대해 알아보겠습니다.
@@ -210,21 +215,22 @@ public class SseEventStream implements EventStream {
        return sseEmitter;
    }
 ```
-SseEmitter의 기본 타임아웃 시간은 30초입니다. 30초 뒤에 무조건 커넥션이 끊어진다는 의미입니다.
+SseEmitter의 기본 타임아웃 시간은 30초입니다. 30초 뒤에 무조건 커넥션이 끊어진다는 의미입니다.  
 보통 타임아웃은 아무런 데이터가 전송되지 않는 *유휴 상태가 지속될 경우*를 뜻하지만, SseEmitter의 경우 지속적으로 데이터가 전송되고 있더라도 첫 데이터 전송 시간으로부터 30초가 지나면 무조건 타임아웃이 발생합니다.
-타임아웃이 발생하면 더이상 커넥션을 사용할 수 없기 때문에 새로운 커넥션을 생성해 주어야 합니다.
+타임아웃이 발생하면 더이상 커넥션을 사용할 수 없기 때문에 새로운 커넥션을 생성해 주어야 합니다.  
 
-SseEmitter를 생성할 때 타임아웃 시간을 지정해 줄 수 있는데, 저는 20분으로 설정해 주었습니다.
+SseEmitter를 생성할 때 타임아웃 시간을 지정해 줄 수 있는데, 저는 20분으로 설정해 주었습니다.  
 
-connect 메서드를 살펴보면, SseEmitter 객체를 통해 데이터를 전송하고 있습니다.
-커넥션 연결에 성공했을 시 name은 “connect”, data는 “OK”가 전송됩니다.
+connect 메서드를 살펴보면, SseEmitter 객체를 통해 데이터를 전송하고 있습니다.  
+커넥션 연결에 성공했을 시 name은 “connect”, data는 “OK”가 전송됩니다.  
 
-개발자 도구를 열어 네트워크 창의 EventStream을 확인하면 아래와 같은 화면을 확인할 수 있습니다.
+개발자 도구를 열어 네트워크 창의 EventStream을 확인하면 아래와 같은 화면을 확인할 수 있습니다.  
+![img_2.png](img_2.png)
 
-
-SSE 커넥션을 맺는 것에 성공했습니다.
-이제 타이머를 시작해 봅시다.
-2 - 타이머 시작
+SSE 커넥션을 맺는 것에 성공했습니다.  
+이제 타이머를 시작해 봅시다.  
+### 2 - 타이머 시작
+``` java
 @RestController
 public class TimerController implements TimerDocs {
 
@@ -238,6 +244,7 @@ schedulerService.start(accessCode);
 return ResponseEntity.noContent()
 .build();
 }
+```
 
 컨트롤러에 타이머 시작 요청 api를 추가합니다.
 accessCode는 페어룸 식별자를 뜻합니다. SSE 커넥션을 맺을 때 사용되었던 key와 같습니다.
@@ -306,25 +313,26 @@ public void start(final String key) {
    scheduling(key, timer);
 }
 ```
-start 메서드에서는 먼저 타이머가 **실행되었다가 중단**된 상태인지, 아니면 **한번도 실행되지 않은** 상태인지를 구분합니다.
-두 상태를 구분하는 이유는 타이머 총 시간은 `DB`에서 관리하지만, 타이머의 현재 시간, 즉 타이머 남은 시간은 `인메모리`로 관리하고 있기 때문입니다. 타이머 시간이 1초씩 줄어들 때마다 db에 업데이트 할 수 없기 때문에 타이머 남은 시간은 TimeStampRegistry에서 관리하고 있습니다.
+start 메서드에서는 먼저 타이머가 **실행되었다가 중단**된 상태인지, 아니면 **한번도 실행되지 않은** 상태인지를 구분합니다.  
+두 상태를 구분하는 이유는 타이머 총 시간은 `DB`에서 관리하지만, 타이머의 현재 시간, 즉 타이머 남은 시간은 `인메모리`로 관리하고 있기 때문입니다. 타이머 시간이 1초씩 줄어들 때마다 db에 업데이트 할 수 없기 때문에 타이머 남은 시간은 TimeStampRegistry에서 관리하고 있습니다.  
 
-타이머가 한번도 실행되지 않았다면 TimeStampRegistry에 타이머 시간이 저장되어 있지 않은 타이머 초기화 상태이기 때문에 DB에서 타이머 총 시간을 가져옵니다.
-타이머가 실행되었던 적이 있다면(실행 후 일시정지 상태), TimeStampRegistry에서 타이머 현재 시간을 가져옵니다.
-DB, 혹은 TimeStampRegistry에서 가져온 시간을 이용해 스케줄링을 시작합니다.
+타이머가 한번도 실행되지 않았다면 TimeStampRegistry에 타이머 시간이 저장되어 있지 않은 타이머 초기화 상태이기 때문에 DB에서 타이머 총 시간을 가져옵니다.  
+타이머가 실행되었던 적이 있다면(실행 후 일시정지 상태), TimeStampRegistry에서 타이머 현재 시간을 가져옵니다.  
+DB, 혹은 TimeStampRegistry에서 가져온 시간을 이용해 스케줄링을 시작합니다.  
 
-Q) 갑자기 스케줄링은 왜 등장하나요?
-A) 사용자가 타이머 일시정지 버튼을 누르기 전까지 *자동으로* 타이머 현재 시간을 1초마다 전송해야 하기 때문입니다.
+- Q) 갑자기 스케줄링은 왜 등장하나요?
+- A) 사용자가 타이머 일시정지 버튼을 누르기 전까지 *자동으로* 타이머 현재 시간을 1초마다 전송해야 하기 때문입니다.
 
+```java
 private void scheduling(final String key, final Timer timer) {
-final Trigger trigger = new PeriodicTrigger(DELAY_SECOND);
-final ScheduledFuture<?> schedule = taskScheduler.schedule(() -> runTimer(key, timer), trigger);
-schedulerRegistry.register(key, schedule);
+    final Trigger trigger = new PeriodicTrigger(DELAY_SECOND);
+    final ScheduledFuture<?> schedule = taskScheduler.schedule(() -> runTimer(key, timer), trigger);
+    schedulerRegistry.register(key, schedule);
 }
-
-스케줄러 실행 주기는 1초마다 시간을 전송해야 하므로 `1초`로 설정했습니다.
-ThreadPoolTaskScheduler를 활용해 1초에 한번씩 runTimer 메서드가 실행되도록 해 주었습니다.
-스케줄러 실행 결과는 페어룸 식별자 별로 SchedulerRegistry에 저장됩니다.
+```
+스케줄러 실행 주기는 1초마다 시간을 전송해야 하므로 `1초`로 설정했습니다.  
+ThreadPoolTaskScheduler를 활용해 1초에 한번씩 runTimer 메서드가 실행되도록 해 주었습니다.  
+스케줄러 실행 결과는 페어룸 식별자 별로 SchedulerRegistry에 저장됩니다.  
 
 ``` java
 private void runTimer(final String key, final Timer timer) {
@@ -342,21 +350,21 @@ private void runTimer(final String key, final Timer timer) {
 ```
 runTimer에서는 타이머 현재 시간을 1초 줄이고, 페어룸에 있는 모든 클라이언트에게 남은 시간을 전송합니다.
 
-전송 과정을 구체적으로 살펴보면,
-페어룸 식별자로 EventStreams 찾고, 해당 EventStreams에 broadcast 적용
+전송 과정을 구체적으로 살펴보겠습니다.
+1. 페어룸 식별자로 EventStreams 찾고, 해당 EventStreams에 broadcast 적용
 ``` java
 public void broadcast(final String key, final String event, final String data) {
    final EventStreams emitters = eventStreamsRegistry.findEventStreams(key);
    emitters.broadcast(event, data);
 }
 ```
-List<EventStream>의 모든 요소를 대상으로 flush 수행
+2. List<EventStream>의 모든 요소를 대상으로 flush 수행
 ```java
 public void broadcast(final String name, final String message) {
    streams.forEach(eventStream -> eventStream.flush(name, message));
 }
-
-EventStream(SseEventStream)의 필드인 SseEmitter로 데이터 전송
+```
+3. EventStream(SseEventStream)의 필드인 SseEmitter로 데이터 전송
 ``` java
 @Override
 public void flush(final String name, final String message) {
@@ -390,75 +398,73 @@ public void flush(final String name, final String message) {
        sseService.broadcast(key, "remaining-time", String.valueOf(timer.getRemainingTime()));
    }
 ```
-타이머 현재 시간이 0초가 된다면(타이머가 한바퀴 돌았을 때), 타이머를 정지하고 타이머 현재 시간을 타이머 총 시간으로 초기화 합니다.
-페어룸에 사용자가 아무도 없을 경우에도 타이머를 정지합니다.
-타이머를 중지하는 stop 메서드는 타이머 일시정지 목차에서 설명드리겠습니다.
+타이머 현재 시간이 0초가 된다면(타이머가 한바퀴 돌았을 때), 타이머를 정지하고 타이머 현재 시간을 타이머 총 시간으로 초기화 합니다.  
+페어룸에 사용자가 아무도 없을 경우에도 타이머를 정지합니다.  
+타이머를 중지하는 stop 메서드는 타이머 일시정지 목차에서 설명드리겠습니다.  
 
 이제 타이머를 시작하면,
+![img_1.png](img_1.png)
+위 사진과 같은 결과를 확인할 수 있습니다.  
+사진에 있는 타이머 시간은 밀리초 기준으로, 타이머 시간이 1000밀리초(1초)씩 줄어들고 있습니다.  
 
-위 사진과 같은 결과를 확인할 수 있습니다.
-사진에 있는 타이머 시간은 밀리초 기준으로, 타이머 시간이 1000밀리초(1초)씩 줄어들고 있습니다.
-3 - 타이머 일시정지
+### 3 - 타이머 일시정지
 이제 실행중인 타이머를 일시정지 해 봅시다.
 이전 단계와 마찬가지로 타이머 일시정지 api를 추가합니다.
+
+```java
 @PatchMapping("/{accessCode}/timer/stop")
 public ResponseEntity<Void> createTimerStop(@PathVariable("accessCode") final String accessCode) {
-schedulerService.pause(accessCode);
-
-
-return ResponseEntity.noContent()
-.build();
+    schedulerService.pause(accessCode);
+    
+    return ResponseEntity.noContent()
+            .build();
 }
-
+```
 schedulerService.pause 메서드를 살펴봅시다.
+``` java
 public void pause(final String key) {
-sseService.broadcast(key, "timer", "pause");
-schedulerRegistry.release(key);
+    sseService.broadcast(key, "timer", "pause");
+    schedulerRegistry.release(key);
 }
-
-페어룸에 있는 모든 사용자에게 타이머가 정지되었다는 데이터를 전송합니다.
+```
+페어룸에 있는 모든 사용자에게 타이머가 정지되었다는 데이터를 전송합니다.  
 그 후, SchedulerRegistry에서 타이머를 정지하고자 하는 페어룸의 스케줄러를 종료합니다.
-
+```java
 @Component
 public class SchedulerRegistry {
+    
+    private final Map<String, ScheduledFuture<?>> registry;
+    
+    public SchedulerRegistry() {
+        this.registry = new ConcurrentHashMap<>();
+    }
+    
+    public void register(final String key, final ScheduledFuture<?> future) {
+        registry.put(key, future);
+    }
+    
+    public void release(final String key) {
+        if (!registry.containsKey(key)) {
+            throw new NotFoundScheduledFutureException("키에 해당하는 스케줄러 결과가 존재하지 않습니다.");
+        }
+        registry.get(key)
+                .cancel(false);
+        registry.remove(key);
+    }
+```
+SchedulerRegistry는 페어룸 별 스케줄링 결과를 관리합니다.  
+release 메서드를 살펴보면, registry에서 페어룸 식별자로 페어룸 결과를 가져오고 있습니다.  
+ScheduledFuture는 스케줄러의 현재 상태를 알 수 있는 스프링이 제공하는 클래스입니다.  
+ScheduledFuture의 상태를 cancel로 변경하여 실행중이던 스케줄러를 종료하고, 해당 ScheduledFuture를 registry에서 삭제합니다.  
 
-
-private final Map<String, ScheduledFuture<?>> registry;
-
-
-public SchedulerRegistry() {
-this.registry = new ConcurrentHashMap<>();
-}
-
-
-public void register(final String key, final ScheduledFuture<?> future) {
-registry.put(key, future);
-}
-
-
-public void release(final String key) {
-if (!registry.containsKey(key)) {
-throw new NotFoundScheduledFutureException("키에 해당하는 스케줄러 결과가 존재하지 않습니다.");
-}
-registry.get(key)
-.cancel(false);
-registry.remove(key);
-}
-
-SchedulerRegistry는 페어룸 별 스케줄링 결과를 관리합니다.
-release 메서드를 살펴보면, registry에서 페어룸 식별자로 페어룸 결과를 가져오고 있습니다.
-ScheduledFuture는 스케줄러의 현재 상태를 알 수 있는 스프링이 제공하는 클래스입니다.
-ScheduledFuture의 상태를 cancel로 변경하여 실행중이던 스케줄러를 종료하고, 해당 ScheduledFuture를 registry에서 삭제합니다.
-
-
-
+![img_3.png](img_3.png)
 성공적으로 타이머가 중단되면, 1초마다 전송되던 타이머 현재 시간이 더이상 전송되지 않고 timer pause 메세지가 마지막으로 전송됩니다.
 
-트러블 슈팅
-지금까지 SSE를 사용하여 타이머를 동기화하는 방법에 대해 알아보았습니다.
+## 트러블 슈팅
+지금까지 SSE를 사용하여 타이머를 동기화하는 방법에 대해 알아보았습니다.  
 SSE를 도입하면서 다양한 에러 상황을 마주했는데요, 이 글을 보시는 여러분도 같은 문제를 겪지 않도록 트러블 슈팅 과정을 공유하겠습니다.
 
-문제 1) 타이머 실행/일시중지 버튼이 동기화 되지 않아요
+### 문제 1) 타이머 실행/일시중지 버튼이 동기화 되지 않아요
 따로 언급하지는 않았지만, 사실 위의 코드 안에 타이머 버튼 동기화 로직이 숨어있었습니다.
 타이머를 실행하거나 중지할 때 어떤 이벤트가 발생했는지 알려주는 “이벤트 메세지"를 함께 전송하면 타이머 버튼도 동기화 할 수 있습니다.
 
@@ -468,7 +474,7 @@ public void pause(final String key) {
    sseService.broadcast(key, "timer", "pause");
    schedulerRegistry.release(key);
 }
-
+```
 타이머 실행 메서드에서도 “timer start” 메세지를 전송한 뒤 1초마다 타이머 시간을 보내주고 있네요.
 ``` java
 public void start(final String key) {
@@ -492,7 +498,7 @@ public void start(final String key) {
 타이머 현재 시간을 보내주거나 타이머를 중지하는 일만 하면 되지, 굳이 “timer start”와 “timer stop” 메세지를 추가로 전송했던 이유가 바로 *버튼 동기화* 때문이었습니다.
 
 만약 이벤트 메세지가 없다면, 타이머를 실행했을 때 타이머 실행 버튼을 누른 사용자의 화면만 정지 버튼이 활성화 되고, 페어룸에 있던 다른 사용자는 시작 버튼이 활성화 된 채로 타이머가 진행될 것입니다.
-문제 2) 테스트 서버에서 설정한 타임아웃 시간보다 일찍 커넥션이 종료돼요
+### 문제 2) 설정한 타임아웃 시간보다 일찍 커넥션이 종료돼요 in 테스트 서버
 SseEmitter의 타임아웃 시간을 20분으로 설정했기 때문에 커넥션이 맺어진 뒤 20분이 지나면 커넥션이 자동으로 종료됩니다.
 그러나 20분이 되기도 전, `net::ERR_HTTP2_PROTOCOL_ERROR 200` 에러와 함께 커넥션이 1분만에 종료되었습니다.
 
@@ -507,37 +513,37 @@ location /api/ {
     proxy_read_timeout 20m;  
 }
 ```
-문제 3) 운영 서버에서 설정한 타임아웃 시간보다 일찍 커넥션이 종료돼요
+### 문제 3) 설정한 타임아웃 시간보다 일찍 커넥션이 종료돼요 in 운영 서버
 테스트 서버에서 타임아웃 문제를 해결했더니, 이제는 운영 서버에서 같은 문제가 발생했습니다.
 운영 서버는 테스트 서버와 달리 `로드밸런서`를 적용한 상태였습니다.
 
-AWS 로드 밸런서 - Load Balancer 속성 편집에 들어가면 연결 유휴 제한 시간을 설정할 수 있습니다.
-
+`AWS 로드 밸런서 - Load Balancer 속성 편집`에 들어가면 `연결 유휴 제한 시간`을 설정할 수 있습니다.
+![img_8.png](img_8.png)
 유휴 제한 시간이란 애플리케이션에서 사용자가 일정 시간동안 아무런 활동을 하지 않을 경우 연결을 자동으로 종료하는 메커니즘을 말합니다.
 유휴 제한 시간 기본값이 1분이기 때문에 커넥션도 1분 뒤 종료된 것입니다.
 
 처음에는 유휴 시간을 타임아웃 시간과 같게 20분으로 설정했으나, 문제가 해결되지 않았습니다.
 그래서 유휴 시간을 25분으로 늘려 주었더니 타임아웃 시간보다 일찍 커넥션이 종료되는 문제를 해결할 수 있었습니다.
+![img_7.png](img_7.png)
+### 문제 4) 운영 서버에서 타이머 동기화가 되지 않아요
+이게 무슨 상황일까요…😱  
+코딩해듀오 운영 서버는 AWS 인스턴스를 두대 띄운 상태이고, 로드밸런서가 임의로 두 인스턴스 중 하나의 인스턴스에 트래픽을 전송합니다.  
+두 인스턴스를 각각 `인스턴스 A`, `인스턴스 B`라고 지칭하겠습니다.
 
-문제 4) 운영 서버에서 타이머 동기화가 되지 않아요
-이게 무슨 상황일까요…😱
-코딩해듀오 운영 서버는 AWS 인스턴스를 두대 띄운 상태이고, 로드밸런서가 임의로 두 인스턴스 중 하나의 인스턴스에 트래픽을 전송합니다.
-두 인스턴스를 각각 인스턴스 A, 인스턴스 B라고 지칭하겠습니다.
-
-타이머 동기화가 되지 않은 이유는 타이머 현재 시간을 *인메모리*로 관리하고 있기 때문입니다.
-동기화에 실패하는 시나리오는 아래와 같습니다.
-페어룸에 첫번째 사용자가 입장한다. 해당 사용자는 인스턴스 A를 거쳐 페어룸에 입장힌다.
-첫번째 사용자가 총 10분으로 설정된 타이머를 실행한다.
-타이머가 3분동안 동작하여 현재 시간이 7분인 페어룸에 두번째 사용자가 입장한다. 해당 사용자는 인스턴스 B를 거쳐 페어룸에 입장한다.
-첫번째 사용자의 타이머 현재 시간은 인스턴스 B의 톰캣 인메모리에 저장되어 있지 않다. 그래서 두번째 사용자의 타이머는 7분부터 시작하는 것이 아닌, 초기화 된 상태인 10분부터 동작하기 시작한다.
+타이머 동기화가 되지 않은 이유는 타이머 현재 시간을 *인메모리*로 관리하고 있기 때문입니다.  
+동기화에 실패하는 시나리오는 아래와 같습니다.  
+1. 페어룸에 첫번째 사용자가 입장한다. 해당 사용자는 `인스턴스 A`를 거쳐 페어룸에 입장힌다. 
+2. 첫번째 사용자가 총 10분으로 설정된 타이머를 실행한다.
+3. 타이머가 3분동안 동작하여 타이머 현재 시간이 7분인 페어룸에 두번째 사용자가 입장한다. 해당 사용자는 `인스턴스 B`를 거쳐 페어룸에 입장한다.
+4. 첫번째 사용자의 타이머 현재 시간인 7분은 *`인스턴스 B`의 톰캣 인메모리에 저장되어 있지 않다.* 그래서 두번째 사용자의 타이머는 7분부터 시작하는 것이 아닌, 초기화 된 상태인 10분부터 동작하기 시작한다.
 
 톰캣 서버가 인스턴스 별로 독립적으로 관리되고 있기 때문에 인메모리 데이터 역시 다른 인스턴스와 공유되지 않습니다.
 
 이 문제를 해결하기 위해 페어룸 식별자 prefix로 `IAN`, `IBN`을 추가하고, 로드밸런서 리스너 규칙 조건으로 경로 패턴을 설정해 주었습니다.
-
-이제부터 식별자가 IAN으로 시작하는 페어룸은 무조건 인스턴스 A로 전달되고,
-식별자가 IBN으로 시작하는 페어룸은 무조건 인스턴스 B로 전달됩니다.
-마무리
+![img_6.png](img_6.png)
+이제부터 식별자가 `IAN`으로 시작하는 페어룸은 무조건 `인스턴스 A`로 전달되고,
+식별자가 `IBN`으로 시작하는 페어룸은 무조건 `인스턴스 B`로 전달됩니다.
+## 마무리
 동기화 문제를 해결하기 위해 SSE를 적용하게 된 배경과 구현 방법에 대해 알아보았습니다.
 
 다양한 예외 처리와 데이터 일관성 문제, 인프라 구조에 따른 트러블 슈팅 등 동기화를 적용하는 과정에서 예상치 못한 문제가 발생할 가능성이 높습니다.
